@@ -1,4 +1,4 @@
-import { useEffect,  useState } from "react";
+import { useEffect, useState } from "react";
 
 interface msgProp {
   sender: string;
@@ -10,17 +10,19 @@ type dataProp = { type: "info"; message: string } | { type: "msg"; sender: strin
 function App() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [allMessage, setMessage] = useState<msgProp[]>([]);
-  const [myMessage,setMy]=useState("")
+  const [myMessage, setMy] = useState("");
   const [name, setName] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
+  const [socketError, setSocketError] = useState<string>(""); // New state to handle socket error
 
   useEffect(() => {
     const socketConnect = () => {
-      const connection = new WebSocket("ws://localhost:3000");
+      const connection = new WebSocket("wss://chatapp-19uj.onrender.com");
 
       connection.onopen = () => {
         console.log("Socket connection established.");
         setSocket(connection);
+        setSocketError(""); // Reset error if connection is successful
       };
 
       connection.onmessage = (message) => {
@@ -39,6 +41,8 @@ function App() {
 
       connection.onerror = (error) => {
         console.error("Socket error:", error);
+        setSocketError("Failed to connect to the server. Please try again later.");
+        setSocket(null);
       };
 
       connection.onclose = () => {
@@ -79,7 +83,7 @@ function App() {
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: "message", content: myMessage }));
       setMessage((m) => [...m, { sender: name, content: myMessage }]);
-      setMy("")
+      setMy("");
     } else {
       console.error("Socket is not connected yet.");
     }
@@ -91,7 +95,11 @@ function App() {
 
   return (
     <div className="h-screen bg-gray-900 text-white flex flex-col">
-      {!isJoined ? (
+      {socketError ? ( 
+        <div className="flex flex-col items-center justify-center h-full space-y-4">
+          <h2 className="text-2xl font-semibold text-red-600">Error: {socketError}</h2>
+        </div>
+      ) : !isJoined ? (
         <div className="flex flex-col items-center justify-center h-full space-y-4">
           <h2 className="text-2xl font-semibold">Enter your username to join the chat</h2>
           <input
@@ -119,10 +127,10 @@ function App() {
                 key={index}
                 className={`flex ${
                   msg.sender === name
-                    ? "justify-end" 
+                    ? "justify-end"
                     : msg.sender === "System"
-                    ? "justify-center" 
-                    : "justify-start" 
+                    ? "justify-center"
+                    : "justify-start"
                 }`}
               >
                 <div
@@ -130,15 +138,15 @@ function App() {
                     msg.sender === name
                       ? "bg-blue-600 text-white p-3 rounded-lg max-w-xs"
                       : msg.sender === "System"
-                      ? "bg-gray-700 text-white bg-transparent" 
+                      ? "bg-gray-700 text-white bg-transparent"
                       : "bg-gray-800 text-white p-3 rounded-lg max-w-xs"
                   }`}
                 >
-                  {msg.sender!=="System"?msg.sender:""}
+                  {msg.sender !== "System" ? msg.sender : ""}
                   {msg.sender === "System" ? (
-                    <p className="text-center text-white text-sm">{msg.content}</p> 
+                    <p className="text-center text-white text-sm">{msg.content}</p>
                   ) : (
-                    <p>{msg.content}</p> 
+                    <p>{msg.content}</p>
                   )}
                 </div>
               </div>
@@ -146,7 +154,7 @@ function App() {
           </div>
           <div className="p-4 bg-gray-800 flex space-x-2">
             <input
-            value={myMessage}
+              value={myMessage}
               type="text"
               placeholder="Type your message"
               onChange={(e) => setMy(e.target.value)}
