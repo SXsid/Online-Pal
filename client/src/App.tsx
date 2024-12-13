@@ -27,7 +27,7 @@ function App() {
 
   useEffect(() => {
     const socketConnect = () => {
-      const connection = new WebSocket("ws://localhost:3000");
+      const connection = new WebSocket("wss://chatapp-19uj.onrender.com");
 
       connection.onopen = () => {
         console.log("Socket connection established.");
