@@ -1,30 +1,26 @@
+import express from "express";
 import http from "http";
+import cors from "cors"
 import { WebSocketServer, WebSocket } from "ws";
 
 type msgProp =
   | { type: "userName"; userName: string }
   | { type: "message"; content: string }
-  | {type:"typing",isTyping:boolean}
+  | { type: "typing"; isTyping: boolean };
 
-const server = http.createServer((req, res) => {
-  const URL = req.url;
+const app = express();
 
 
-   res.setHeader("Access-Control-Allow-Origin", "*"); 
-   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
- 
-   if (req.method === "OPTIONS") {
-    
-     res.statusCode = 204;
-     res.end();
-     return;
-   }
-  res.end("Server is requested on " + URL);
+app.use(cors());
+
+app.get("/", (req, res) => {
+  res.send("Express server is running!");
 });
 
+const server = http.createServer(app); 
+
 const ws = new WebSocketServer({ server });
-const users = new Map<WebSocket, string>(); 
+const users = new Map<WebSocket, string>();
 
 const broadcast = (data: object, senderSocket: WebSocket) => {
   ws.clients.forEach((client) => {
@@ -39,11 +35,12 @@ const broadcast = (data: object, senderSocket: WebSocket) => {
 };
 
 ws.on("connection", (socket) => {
+  console.log("New WebSocket connection established");
+
   socket.on("error", (error) => {
     console.error("WebSocket error:", error);
   });
-  
-  // socket.on("open")
+
   socket.on("message", (msg) => {
     try {
       const parsedMsg: msgProp = JSON.parse(msg.toString());
@@ -54,12 +51,22 @@ ws.on("connection", (socket) => {
           const userName = parsedMsg.userName.trim();
           if (userName) {
             users.set(socket, userName);
-            broadcast({ type: "info", message: `${userName} has joined the chat.` }, socket);
-            const  activeConnectionsCount=ws.clients.size
-             socket.send(JSON.stringify({ type: "activeConnections", activeConnectionsCount }));
-              broadcast({ type: "activeConnections", activeConnectionsCount }, socket);
+            broadcast(
+              { type: "info", message: `${userName} has joined the chat.` },
+              socket
+            );
+            const activeConnectionsCount = ws.clients.size;
+            socket.send(
+              JSON.stringify({ type: "activeConnections", activeConnectionsCount })
+            );
+            broadcast(
+              { type: "activeConnections", activeConnectionsCount },
+              socket
+            );
           } else {
-            socket.send(JSON.stringify({ type: "error", message: "Invalid username" }));
+            socket.send(
+              JSON.stringify({ type: "error", message: "Invalid username" })
+            );
           }
           break;
         }
@@ -69,19 +76,26 @@ ws.on("connection", (socket) => {
           if (sender && data) {
             broadcast({ type: "msg", sender, data }, socket);
           } else {
-            socket.send(JSON.stringify({ type: "error", message: "Message content is empty" }));
+            socket.send(
+              JSON.stringify({ type: "error", message: "Message content is empty" })
+            );
           }
           break;
         }
-        case "typing":{
-          const userName = users.get(socket)
-          if(userName){
-            broadcast({type:"typing",status:parsedMsg.isTyping,sender:userName},socket)
+        case "typing": {
+          const userName = users.get(socket);
+          if (userName) {
+            broadcast(
+              { type: "typing", status: parsedMsg.isTyping, sender: userName },
+              socket
+            );
           }
-          break
+          break;
         }
         default:
-          socket.send(JSON.stringify({ type: "error", message: "Unknown message type" }));
+          socket.send(
+            JSON.stringify({ type: "error", message: "Unknown message type" })
+          );
           break;
       }
     } catch (error) {
@@ -90,20 +104,25 @@ ws.on("connection", (socket) => {
     }
   });
 
-  
   socket.on("close", () => {
     const userName = users.get(socket);
-    const activeConnectionsCount=ws.clients.size
+    const activeConnectionsCount = ws.clients.size;
     if (userName) {
       users.delete(socket);
-      broadcast({ type: "info", message: `${userName} has left the chat.` }, socket);
-      broadcast({type:"typing",status:false,sender:userName},socket)
-      broadcast({ type: "activeConnections", activeConnectionsCount }, socket);
+      broadcast(
+        { type: "info", message: `${userName} has left the chat.` },
+        socket
+      );
+      broadcast({ type: "typing", status: false, sender: userName }, socket);
+      broadcast(
+        { type: "activeConnections", activeConnectionsCount },
+        socket
+      );
     }
   });
 });
 
-
-server.listen(3000, () => {
-  console.log("Server is up and running on port 3000");
+const PORT = 3000;
+server.listen(PORT, () => {
+  console.log(`Server is up and running on port ${PORT}`);
 });
