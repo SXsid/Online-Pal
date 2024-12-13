@@ -3,7 +3,8 @@ import { WebSocketServer, WebSocket } from "ws";
 
 type msgProp =
   | { type: "userName"; userName: string }
-  | { type: "message"; content: string };
+  | { type: "message"; content: string }
+  | {type:"typing",isTyping:boolean}
 
 const server = http.createServer((req, res) => {
   const URL = req.url;
@@ -41,9 +42,8 @@ ws.on("connection", (socket) => {
   socket.on("error", (error) => {
     console.error("WebSocket error:", error);
   });
-
   
-
+  // socket.on("open")
   socket.on("message", (msg) => {
     try {
       const parsedMsg: msgProp = JSON.parse(msg.toString());
@@ -55,6 +55,9 @@ ws.on("connection", (socket) => {
           if (userName) {
             users.set(socket, userName);
             broadcast({ type: "info", message: `${userName} has joined the chat.` }, socket);
+            const  activeConnectionsCount=ws.clients.size
+             socket.send(JSON.stringify({ type: "activeConnections", activeConnectionsCount }));
+              broadcast({ type: "activeConnections", activeConnectionsCount }, socket);
           } else {
             socket.send(JSON.stringify({ type: "error", message: "Invalid username" }));
           }
@@ -70,6 +73,13 @@ ws.on("connection", (socket) => {
           }
           break;
         }
+        case "typing":{
+          const userName = users.get(socket)
+          if(userName){
+            broadcast({type:"typing",status:parsedMsg.isTyping,sender:userName},socket)
+          }
+          break
+        }
         default:
           socket.send(JSON.stringify({ type: "error", message: "Unknown message type" }));
           break;
@@ -83,9 +93,12 @@ ws.on("connection", (socket) => {
   
   socket.on("close", () => {
     const userName = users.get(socket);
+    const activeConnectionsCount=ws.clients.size
     if (userName) {
       users.delete(socket);
       broadcast({ type: "info", message: `${userName} has left the chat.` }, socket);
+      broadcast({type:"typing",status:false,sender:userName},socket)
+      broadcast({ type: "activeConnections", activeConnectionsCount }, socket);
     }
   });
 });

@@ -5,7 +5,13 @@ interface msgProp {
   content: string;
 }
 
-type dataProp = { type: "info"; message: string } | { type: "msg"; sender: string; data: string };
+type dataProp = 
+|{ type: "info"; message: string } 
+| { type: "msg"; sender: string; data: string }
+| {type:"typing",status:boolean,sender:string}
+|{ type: "activeConnections", activeConnectionsCount:number
+
+ }
 
 function App() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -13,16 +19,20 @@ function App() {
   const [myMessage, setMy] = useState("");
   const [name, setName] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
-  const [socketError, setSocketError] = useState<string>(""); // New state to handle socket error
+  const [socketError, setSocketError] = useState<string>(""); 
+  const [isTyping,setTyping]=useState(false)
+  const [someoneTyping,setSomeone]=useState<string[]>([])
+  const [activeConnections, setActiveConnections] = useState<number>(0);
+
 
   useEffect(() => {
     const socketConnect = () => {
-      const connection = new WebSocket("wss://chatapp-19uj.onrender.com");
+      const connection = new WebSocket("ws://localhost:3000");
 
       connection.onopen = () => {
         console.log("Socket connection established.");
         setSocket(connection);
-        setSocketError(""); // Reset error if connection is successful
+        setSocketError(""); 
       };
 
       connection.onmessage = (message) => {
@@ -33,6 +43,19 @@ function App() {
             setMessage((prev) => [...prev, { sender: "System", content: data.message }]);
           } else if (data.type === "msg") {
             setMessage((prev) => [...prev, { sender: data.sender, content: data.data }]);
+          }else if(data.type==="typing"){
+            setSomeone((prevUser)=>{
+              if(data.status && !prevUser.includes(data.sender)){
+                return [...prevUser,data.sender]
+              }else if (!data.status ){
+                return prevUser.filter(userName=>userName!==data.sender)
+              }
+              return prevUser
+            })
+          } else if (data.type === "activeConnections") {
+            console.log(data.activeConnectionsCount);
+            
+            setActiveConnections(data.activeConnectionsCount); 
           }
         } catch (error) {
           console.error("Error parsing message:", error);
@@ -81,17 +104,45 @@ function App() {
     }
 
     if (socket?.readyState === WebSocket.OPEN) {
+      sendTyping(false)
       socket.send(JSON.stringify({ type: "message", content: myMessage }));
       setMessage((m) => [...m, { sender: name, content: myMessage }]);
       setMy("");
+      setTyping(false)  
     } else {
       console.error("Socket is not connected yet.");
     }
   };
 
-  if (!socket) {
+  function sendTyping(status:boolean){
+    if(socket?.readyState===WebSocket.OPEN){
+      socket.send(JSON.stringify({type:"typing",isTyping:status}))
+    }
+  }
+  const handleTyping=(e:React.ChangeEvent<HTMLInputElement>)=>{
+    setMy(e.target.value)
+    if(!isTyping){
+      setTyping(true)
+      sendTyping(true)
+      
+    }
+
+  }
+  useEffect(()=>{
+    let interval:number
+   if(isTyping){
+     interval = setTimeout(()=>{
+      setTyping(false)
+      sendTyping(false)},1500)
+   }
+   return ()=>clearTimeout(interval)
+  },[myMessage,isTyping])
+  
+
+  if (!socket &&!socketError) {
     return <div className="h-screen flex items-center justify-center text-white">Connecting the socket...</div>;
   }
+
 
   return (
     <div className="h-screen bg-gray-900 text-white flex flex-col">
@@ -120,6 +171,11 @@ function App() {
         <>
           <div className="flex items-center justify-between p-4 bg-gray-800">
             <h2 className="text-lg font-semibold">Welcome, {name}!</h2>
+            {isJoined && (
+            <span className="text-green-400 text-sm ml-2">
+              {activeConnections} user{activeConnections > 1 ? 's' : ''} online
+            </span>
+          )}
           </div>
           <div className="flex flex-col flex-1 overflow-y-auto space-y-2 p-4">
             {allMessage.map((msg, index) => (
@@ -151,13 +207,20 @@ function App() {
                 </div>
               </div>
             ))}
+            {
+              someoneTyping.map(someone=>{
+                return(
+                  <div className=" text-sm text-blue-400">{someone} is typing...</div>
+                )
+              })
+            }
           </div>
           <div className="p-4 bg-gray-800 flex space-x-2">
             <input
               value={myMessage}
               type="text"
               placeholder="Type your message"
-              onChange={(e) => setMy(e.target.value)}
+              onChange={(e) => handleTyping(e)}
               className="flex-1 px-4 py-2 rounded bg-gray-700 text-white focus:outline-none focus:ring focus:ring-blue-500"
             />
             <button
