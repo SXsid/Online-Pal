@@ -146,11 +146,13 @@ function App() {
                 </div>
               </div>
             ))}
-            {someoneTyping.map((someone) => {
-              return (
-                <div className="text-sm text-blue-400">{someone} is typing...</div>
-              );
-            })}
+            {someoneTyping.length>0 &&
+            <div
+            className="text-sm text-blue-400"
+            >{someoneTyping.length===1 ?
+            `${someoneTyping[0]} is Typing...`:
+            `${someoneTyping.slice(0,-1).join(" , ")} & ${someoneTyping[someoneTyping.length - 1]} are Typing...`
+            }</div>}
           </div>
           <div className="p-4 bg-gray-800 flex space-x-2">
             <input
