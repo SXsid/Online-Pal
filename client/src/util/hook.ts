@@ -12,6 +12,7 @@ export interface msgProp {
   | { type: "activeConnections"; activeConnectionsCount: number };
 
 export function useSocketConnection() {
+  const [laoding,setLoading]=useState(false)
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [socketError, setSocketError] = useState<string>("");
   const [allMessage, setMessages] = useState<msgProp[]>([]);
@@ -21,8 +22,9 @@ export function useSocketConnection() {
   useEffect(() => {
     const checkServerAndConnectSocket = async () => {
       try {
+        setLoading(true)
         const response = await fetch("https://chatapp-19uj.onrender.com");
-        if (response.ok) {
+        if (response &&response.ok) {
           console.log("Server is available. Connecting to WebSocket...");
 
           const connection = new WebSocket("wss://chatapp-19uj.onrender.com");
@@ -31,6 +33,7 @@ export function useSocketConnection() {
             console.log("Socket connection established.");
             setSocket(connection);
             setSocketError("");
+            setLoading(false)
           };
 
           connection.onmessage = (message) => {
@@ -65,14 +68,18 @@ export function useSocketConnection() {
           };
 
           connection.onerror = (error) => {
+            
             console.error("Socket error:", error);
-            setSocketError("Failed to connect to the server. Please try again later.");
+            setSocketError("Failed to connect to the server. Please retry.");
             setSocket(null);
+            setLoading(false)
+            
           };
 
           connection.onclose = () => {
             console.log("Socket connection closed.");
             setSocket(null);
+            setLoading(false)
           };
 
           return connection;
@@ -80,8 +87,10 @@ export function useSocketConnection() {
           throw new Error("Server is down");
         }
       } catch (error) {
+       setLoading(false)
+        
         console.error("Error checking server availability:", error);
-        setSocketError("Server is down. Please try again later.");
+        setSocketError("Server is down. Please wait for couple of min .");
       }
     };
 
@@ -92,5 +101,5 @@ export function useSocketConnection() {
     };
   }, []);
 
-  return { socket, socketError, allMessage, someoneTyping, activeConnections,setMessages, };
+  return { socket, socketError, allMessage, someoneTyping, activeConnections,setMessages,laoding };
 }

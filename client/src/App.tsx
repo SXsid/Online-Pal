@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSocketConnection } from "./util/hook";
+import SquareLoader from "./Loader";
 
 
 
@@ -11,7 +12,7 @@ function App() {
   const [name, setName] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
   const [isTyping,setTyping]=useState(false)
-  const {socket,socketError,activeConnections,someoneTyping,allMessage,setMessages}=useSocketConnection()
+  const {socket,socketError,activeConnections,someoneTyping,allMessage,setMessages,laoding}=useSocketConnection()
   
 
   
@@ -71,16 +72,26 @@ function App() {
     return () => clearTimeout(interval);
   }, [myMessage, isTyping]);
 
-  if (!socket && !socketError) {
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  if (laoding && !socketError) {
     return (
-      <div className="h-screen flex items-center justify-center text-white">
-        Connecting to the server...
+      <div className="h-screen text-black font-xl font-bold">
+        <SquareLoader/>
       </div>
     );
   }
 
+
   return (
     <div className="h-screen bg-gray-900 text-white flex flex-col">
+
       {socketError ? (
         <div className="flex flex-col items-center justify-center h-full space-y-4">
           <h2 className="text-2xl font-semibold text-red-600">
@@ -160,6 +171,7 @@ function App() {
               type="text"
               placeholder="Type your message"
               onChange={(e) => handleTyping(e)}
+              onKeyDown={handleKeyPress}
               className="flex-1 px-4 py-2 rounded bg-gray-700 text-white focus:outline-none focus:ring focus:ring-blue-500"
             />
             <button
