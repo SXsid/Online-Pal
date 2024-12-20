@@ -12,7 +12,9 @@ function App() {
   const [name, setName] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
   const [isTyping,setTyping]=useState(false)
-  const {socket,socketError,activeConnections,someoneTyping,allMessage,setMessages,laoding}=useSocketConnection()
+  const {socket,socketError, 
+    activeUser :activeConnections,userTyping:someoneTyping,
+    chat: allMessage,setChat:setMessages,loading}=useSocketConnection()
   
 
   
@@ -80,7 +82,7 @@ function App() {
     }
   };
 
-  if (laoding && !socketError) {
+  if (loading && !socketError) {
     return (
       <div className="h-screen text-black font-xl font-bold">
         <SquareLoader/>

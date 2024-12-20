@@ -11,95 +11,110 @@ export interface msgProp {
   | { type: "typing"; status: boolean; sender: string }
   | { type: "activeConnections"; activeConnectionsCount: number };
 
-export function useSocketConnection() {
-  const [laoding,setLoading]=useState(false)
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [socketError, setSocketError] = useState<string>("");
-  const [allMessage, setMessages] = useState<msgProp[]>([]);
-  const [someoneTyping, setSomeoneTyping] = useState<string[]>([]);
-  const [activeConnections, setActiveConnections] = useState<number>(0);
+export const useSocketConnection=()=>{
+  const [socket,setSocket]=useState<WebSocket|null>(null)
+  const [loading,setLoading]=useState(false)
+  const [socketError,setError]=useState("")
+  const [chat,setChat]=useState<msgProp[]>([])
+  const [userTyping,setTypingUsers]=useState<string[]>([])
+  const [activeUser,setUser]=useState(0)
 
-  useEffect(() => {
-    const checkServerAndConnectSocket = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch("https://chatapp-19uj.onrender.com");
-        if (response &&response.ok) {
-          console.log("Server is available. Connecting to WebSocket...");
-
-          const connection = new WebSocket("wss://chatapp-19uj.onrender.com");
-
-          connection.onopen = () => {
-            console.log("Socket connection established.");
-            setSocket(connection);
-            setSocketError("");
-            setLoading(false)
-          };
-
-          connection.onmessage = (message) => {
-            try {
-              const data: dataProp = JSON.parse(message.data);
-
-              if (data.type === "info") {
-                setMessages((prev) => [
-                  ...prev,
-                  { sender: "System", content: data.message },
-                ]);
-              } else if (data.type === "msg") {
-                setMessages((prev) => [
-                  ...prev,
-                  { sender: data.sender, content: data.data },
-                ]);
-              } else if (data.type === "typing") {
-                setSomeoneTyping((prevUser) => {
-                  if (data.status && !prevUser.includes(data.sender)) {
-                    return [...prevUser, data.sender];
-                  } else if (!data.status) {
-                    return prevUser.filter((userName) => userName !== data.sender);
-                  }
-                  return prevUser;
-                });
-              } else if (data.type === "activeConnections") {
-                setActiveConnections(data.activeConnectionsCount);
-              }
-            } catch (error) {
-              console.error("Error parsing message:", error);
-            }
-          };
-
-          connection.onerror = (error) => {
-            
-            console.error("Socket error:", error);
-            setSocketError("Failed to connect to the server. Please retry.");
-            setSocket(null);
-            setLoading(false)
-            
-          };
-
-          connection.onclose = () => {
-            console.log("Socket connection closed.");
-            setSocket(null);
-            setLoading(false)
-          };
-
-          return connection;
-        } else {
-          throw new Error("Server is down");
-        }
-      } catch (error) {
-       setLoading(false)
+  useEffect(()=>{
+    const SocketConnect =async()=>{
+      setLoading(true)
+     try{
+      const response = await fetch("https://online-pal-production.up.railway.app/")
+      if(response && response.ok){
+        const server = new WebSocket("wss://online-pal-production.up.railway.app/")
+        console.log(server);
         
-        console.error("Error checking server availability:", error);
-        setSocketError("Server is down. Please wait for couple of min .");
+        server.onopen=()=>{
+          setLoading(false)
+          setSocket(server)
+          setError("")
+        }
+        server.onmessage=(message)=>{
+          try{
+            const data:dataProp= JSON.parse(message.data)
+            const {type}=data
+            switch(type){
+              case"info":{
+                setChat(prev=>[...prev,{sender:"System",content:data.message}])
+                break
+              }
+              case "msg":{
+                
+                setChat(prev=>[...prev,{sender:data.sender,content:data.data}])
+                break
+              }
+              case "typing":{
+                const {sender,status}=data
+                setTypingUsers(users=>{
+                  if(status) return [...users,sender]
+                  else if(!status && users.includes(sender)){
+                    return users.filter(user=>user!==sender)
+                  }
+                  return users
+                })
+                break
+              }
+              case "activeConnections":{
+                setUser(data.activeConnectionsCount)
+              }
+            }
+          }catch(e){
+            console.error("Error while parsing",e)
+          }
+        }
+        server.onerror=(error)=>{
+          console.error("Server Errror",error)
+          setLoading(false)
+          setError("Error: server down plzz try again later ")
+        }
+        server.onclose=()=>{
+          console.log("connection closed");
+          
+          setLoading(false)
+          setSocket(null)
+        }
+        
+      }else{
+        setError("server is down plzz try later")
+        setLoading(false)
+        
       }
-    };
+     }catch(e){
+      console.error("fetch failed")
+      setError("server crashed try later")
+      setLoading(false)
+     }
 
-    const connection = checkServerAndConnectSocket();
+      
+    }
+    SocketConnect()
+    return ()=>{
+      if(socket){
+        socket.onclose=null
+        socket.onerror=null
+        socket.close()
+       
+      }
+  
+  
+  }
 
-    return () => {
-      connection?.then((conn) => conn?.close());
-    };
-  }, []);
-
-  return { socket, socketError, allMessage, someoneTyping, activeConnections,setMessages,laoding };
+  }
+  
+  
+  
+  ,[])
+  return{
+    socket,
+    loading,
+    activeUser,
+    chat,
+    userTyping,
+    socketError,
+    setChat
+  }
 }

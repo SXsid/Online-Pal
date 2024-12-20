@@ -1,9 +1,9 @@
 
 const SquareLoader = () => {
-  // Create an array of 7 elements for the squares
+  
   const squares = Array(7).fill(null);
 
-  // Add keyframes for the square animation
+ 
   const style = document.createElement('style');
   style.textContent = `
     @keyframes square-animation {
