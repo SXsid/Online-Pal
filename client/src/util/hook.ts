@@ -23,7 +23,7 @@ export const useSocketConnection = () => {
   useEffect(() => {
     const connectSocket = () => {
       setLoading(true);
-      const server = io("http://localhost:3000", {
+      const server = io("https://online-pal-production.up.railway.app/", {
         transports: ["websocket"],
       });
 
