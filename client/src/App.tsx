@@ -16,6 +16,8 @@ function App() {
     activeUser :activeConnections,userTyping:someoneTyping,
     chat: allMessage,setChat:setMessages,loading}=useSocketConnection()
   
+    console.log(someoneTyping);
+    
 
   
   const handleJoin = () => {
@@ -24,8 +26,8 @@ function App() {
       return;
     }
 
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "userName", userName: name }));
+    if (socket?.active) {
+      socket.emit("message",{ type: "userName", userName: name });
       setIsJoined(true);
     } else {
       console.error("Socket is not connected yet.");
@@ -38,9 +40,9 @@ function App() {
       return;
     }
 
-    if (socket?.readyState === WebSocket.OPEN) {
+    if (socket?.active) {
       sendTyping(false);
-      socket.send(JSON.stringify({ type: "message", content: myMessage }));
+      socket.emit("message",{ type: "message", content: myMessage });
       setMessages((m) => [...m, { sender: name, content: myMessage }]);
       setMy("");
       setTyping(false);
@@ -50,8 +52,8 @@ function App() {
   };
 
   function sendTyping(status: boolean) {
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "typing", isTyping: status }));
+    if (socket?.active) {
+      socket.emit("message",{ type: "typing", isTyping: status });
     }
   }
 

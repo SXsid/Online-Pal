@@ -1,0 +1,1 @@
+{"root":["./src/app.ts","./src/index.ts","./src/config/redis.ts","./src/config/server.ts","./src/types/global.d.ts","./src/types/sockettypes.ts","./src/websocket/controller.ts","./src/websocket/services.ts","./src/websocket/socket.ts","./src/services/socketuserservices.ts"],"version":"5.7.2"}
