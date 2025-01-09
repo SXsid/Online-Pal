@@ -1,14 +1,14 @@
 import { Server as HTTPServer } from "http";
 import { Server } from "socket.io";
 import { socketHandler } from "./controller";
-import { redis, sub } from "../Config/redis";
+import {  sub } from "../Config/redis";
 
 export const initSocketServer =async (server: HTTPServer) => {
   
   await sub.subscribe("MESSAGES", (err) => {
     if (err) console.error('Subscribe error:', err);
   });
-  await redis.set("active-user",0)
+  
   const io = new Server(server, {
     cors: {
       origin: "*",
